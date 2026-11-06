@@ -5,9 +5,10 @@ import { LocateGoStatus } from '../types';
 interface LiveStatusIndicatorProps {
   status: LocateGoStatus;
   maxDistanceKm: number;
+  maxPickupDistanceKm?: number;
 }
 
-export const LiveStatusIndicator: React.FC<LiveStatusIndicatorProps> = ({ status, maxDistanceKm }) => {
+export const LiveStatusIndicator: React.FC<LiveStatusIndicatorProps> = ({ status, maxDistanceKm, maxPickupDistanceKm = 2.0 }) => {
   const acceptanceRate =
     status.totalScanned > 0 ? Math.round((status.acceptedCount / status.totalScanned) * 100) : 0;
 
@@ -69,7 +70,7 @@ export const LiveStatusIndicator: React.FC<LiveStatusIndicatorProps> = ({ status
             </h3>
             <p className="text-xs text-slate-400 mt-0.5">
               {status.isRunning
-                ? `يتم فحص نافذة العرض كل 200ms، وقبول أي طلب مسافته ≤ ${maxDistanceKm} كم فورياً عبر السحب التلقائي (Auto-Swipe)`
+                ? `رصد فوري مستمر: قبول الطلب بالسحب الفائق (90ms) إذا كانت مسافة المطعم ≤ ${maxPickupDistanceKm} كم ومسافة العميل ≤ ${maxDistanceKm} كم`
                 : 'لن يتم قبول أو تحليل أي طلبات حتى يتم تشغيل الأداة عبر الزر الرئيسي'}
             </p>
           </div>

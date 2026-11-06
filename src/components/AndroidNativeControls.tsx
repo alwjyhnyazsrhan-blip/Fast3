@@ -209,9 +209,9 @@ export const AndroidNativeControls: React.FC<AndroidNativeControlsProps> = ({
             <Target className="w-4 h-4 text-cyan-400" />
             <span className="text-xs font-bold text-white">حزم تطبيقات التوصيل المستهدفة (6 حزم نشطة - Zero Delay):</span>
           </div>
-          <span className="text-[11px] text-emerald-400 font-medium flex items-center gap-1">
-            <Zap className="w-3 h-3 text-emerald-400" />
-            اعتماد حصري على مسافة العميل (≤ {settings.maxDistanceKm} كم) • بدون سحب
+          <span className="text-[11px] text-teal-300 font-medium flex items-center gap-1">
+            <Zap className="w-3 h-3 text-teal-400" />
+            تحكم مزدوج: المطعم (≤ {settings.maxPickupDistanceKm ?? 2.0} كم) • العميل (≤ {settings.maxDistanceKm} كم) • سحب فائق (90ms)
           </span>
         </div>
 
@@ -235,7 +235,7 @@ export const AndroidNativeControls: React.FC<AndroidNativeControlsProps> = ({
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                   مراقب لحظياً
                 </span>
-                <span className="text-slate-400">بدون سحب</span>
+                <span className="text-teal-300 font-bold">سحب فائق ⚡</span>
               </div>
             </div>
           ))}
@@ -249,9 +249,11 @@ export const AndroidNativeControls: React.FC<AndroidNativeControlsProps> = ({
           <span>حالة خدمة أندرويد: {status.isRunning ? 'نشطة ومتصلة' : 'متوقفة'}</span>
         </div>
         <div className="flex items-center gap-3">
-          <span>نطاق العميل الفعال: <strong className="text-emerald-400 font-bold">{settings.maxDistanceKm} كم</strong></span>
+          <span>نطاق العميل: <strong className="text-emerald-400 font-bold">{settings.maxDistanceKm} كم</strong></span>
           <span>•</span>
-          <span>مسافة المطعم: <strong className="text-cyan-300">مفتوحة واختيارية</strong></span>
+          <span>نطاق المطعم: <strong className="text-teal-400 font-bold">{settings.maxPickupDistanceKm ?? 2.0} كم</strong></span>
+          <span>•</span>
+          <span>آلية القبول: <strong className="text-teal-300 font-bold">سحب فوري (90ms)</strong></span>
           <span>•</span>
           <span>القبول التلقائي: <strong className={settings.autoAccept ? 'text-emerald-400' : 'text-slate-400'}>{settings.autoAccept ? 'مفعل' : 'معطل'}</strong></span>
         </div>

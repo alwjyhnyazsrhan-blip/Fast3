@@ -453,16 +453,22 @@ async function startServer() {
       });
     }
 
-    const maxAllowed = device.settings.maxDistanceKm;
+    const maxAllowedDelivery = device.settings.maxDistanceKm;
+    const maxAllowedPickup = device.settings.maxPickupDistanceKm ?? 2.0;
     const minPayout = device.settings.minPayoutSar;
 
-    const isDistanceAcceptable = computedDistance <= maxAllowed;
+    const isDeliveryAcceptable = computedDistance <= maxAllowedDelivery;
+    const isPickupAcceptable = typeof pickupDistanceKm === "number" && pickupDistanceKm > 0
+      ? pickupDistanceKm <= maxAllowedPickup
+      : true;
     const isPayoutAcceptable = payoutSar >= minPayout;
-    const isAccepted = isDistanceAcceptable && isPayoutAcceptable;
+    const isAccepted = isDeliveryAcceptable && isPickupAcceptable && isPayoutAcceptable;
 
     let rejectionReason: string | undefined = undefined;
-    if (!isDistanceAcceptable) {
-      rejectionReason = `المسافة (${computedDistance} كم) تتجاوز الحد الأقصى لمندوب هذا الجهاز (${maxAllowed} كم)`;
+    if (!isDeliveryAcceptable) {
+      rejectionReason = `مسافة العميل (${computedDistance} كم) تتجاوز الحد الأقصى (${maxAllowedDelivery} كم)`;
+    } else if (!isPickupAcceptable) {
+      rejectionReason = `مسافة المطعم (${pickupDistanceKm} كم) تتجاوز الحد الأقصى المحدد (${maxAllowedPickup} كم)`;
     } else if (!isPayoutAcceptable) {
       rejectionReason = `قيمة التوصيل (${payoutSar} ر.س) أقل من الحد الأدنى المطلوب (${minPayout} ر.س)`;
     }
@@ -501,7 +507,8 @@ async function startServer() {
       order: savedOrder,
       evaluation: {
         computedDistanceKm: computedDistance,
-        maxAllowedKm: maxAllowed,
+        maxAllowedKm: maxAllowedDelivery,
+        maxPickupDistanceKm: maxAllowedPickup,
         isAccepted,
         rejectionReason,
       },

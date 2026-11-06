@@ -24,6 +24,7 @@ export interface RealOrder {
 
 export interface DeviceSettings {
   maxDistanceKm: number;
+  maxPickupDistanceKm: number;
   autoAccept: boolean;
   soundAlerts: boolean;
   minPayoutSar: number;
@@ -55,6 +56,7 @@ export interface DatabaseSchema {
 
 const DEFAULT_SETTINGS: DeviceSettings = {
   maxDistanceKm: 2.0,
+  maxPickupDistanceKm: 2.0,
   autoAccept: true,
   soundAlerts: true,
   minPayoutSar: 15.0,
@@ -165,6 +167,9 @@ class DeviceDatabase {
 
     if (typeof newSettings.maxDistanceKm === 'number' && newSettings.maxDistanceKm > 0) {
       device.settings.maxDistanceKm = Math.round(newSettings.maxDistanceKm * 10) / 10;
+    }
+    if (typeof newSettings.maxPickupDistanceKm === 'number' && newSettings.maxPickupDistanceKm > 0) {
+      device.settings.maxPickupDistanceKm = Math.round(newSettings.maxPickupDistanceKm * 10) / 10;
     }
     if (typeof newSettings.autoAccept === 'boolean') {
       device.settings.autoAccept = newSettings.autoAccept;

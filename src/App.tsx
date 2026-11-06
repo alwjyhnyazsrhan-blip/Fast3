@@ -22,6 +22,7 @@ export default function App() {
   const [deviceId, setDeviceIdState] = useState<string>(getActiveDeviceId());
   const [settings, setSettings] = useState<LocateGoSettings>({
     maxDistanceKm: 2.0,
+    maxPickupDistanceKm: 2.0,
     autoAccept: true,
     soundAlerts: true,
     minPayoutSar: 15.0,
@@ -259,6 +260,7 @@ export default function App() {
           setSettings((prev) => ({
             ...prev,
             maxDistanceKm: parsed.maxDistanceKm ?? prev.maxDistanceKm,
+            maxPickupDistanceKm: parsed.maxPickupDistanceKm ?? prev.maxPickupDistanceKm ?? 2.0,
             autoAccept: parsed.autoAccept ?? prev.autoAccept,
             soundAlerts: parsed.soundAlerts ?? prev.soundAlerts,
             minPayoutSar: parsed.minPayoutSar ?? prev.minPayoutSar,
@@ -537,6 +539,30 @@ export default function App() {
     }
   };
 
+  const handleUpdateMaxPickupDistance = async (km: number) => {
+    setSettings((prev) => {
+      const updated = { ...prev, maxPickupDistanceKm: km };
+      const bridge = getNativeBridge();
+      if (bridge) {
+        bridge.saveSettings(JSON.stringify(updated));
+      }
+      return updated;
+    });
+
+    try {
+      await fetch('/api/settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Device-Id': deviceId,
+        },
+        body: JSON.stringify({ maxPickupDistanceKm: km, deviceId }),
+      });
+    } catch {
+      // Keep local
+    }
+  };
+
   const handleUpdateSettings = async (newSettings: Partial<LocateGoSettings>) => {
     setSettings((prev) => {
       const updated = { ...prev, ...newSettings };
@@ -727,12 +753,13 @@ export default function App() {
             onUpdateSettings={handleUpdateSettings}
           />
 
-          {/* 3. Main Controls: Master Start/Stop & Max Distance Threshold */}
+          {/* 3. Main Controls: Master Start/Stop & Dual Distance Thresholds */}
           <MainControlCard
             settings={settings}
             status={status}
             onTogglePower={handleTogglePower}
             onUpdateMaxDistance={handleUpdateMaxDistance}
+            onUpdateMaxPickupDistance={handleUpdateMaxPickupDistance}
             onUpdateSettings={handleUpdateSettings}
             onGetLiveLocation={handleGetLiveGPSLocation}
             isLocating={isLocating}
@@ -742,12 +769,14 @@ export default function App() {
           <LiveStatusIndicator
             status={status}
             maxDistanceKm={settings.maxDistanceKm}
+            maxPickupDistanceKm={settings.maxPickupDistanceKm ?? 2.0}
           />
 
           {/* 5. Detected Orders Feed & History */}
           <OrdersFeed
             orders={orders}
             maxDistanceKm={settings.maxDistanceKm}
+            maxPickupDistanceKm={settings.maxPickupDistanceKm ?? 2.0}
             isRunning={status.isRunning}
             onClearOrders={handleClearOrders}
             onTestCustomOrder={handleProcessOrder}
@@ -766,7 +795,9 @@ export default function App() {
             <span className="text-slate-400">| نظام الفلترة المباشر</span>
           </div>
           <div className="flex items-center gap-3 text-slate-400 font-mono">
-            <span>الحد الفعال: {settings.maxDistanceKm} كم</span>
+            <span>حد العميل: {settings.maxDistanceKm} كم</span>
+            <span>•</span>
+            <span>حد المطعم: {settings.maxPickupDistanceKm ?? 2.0} كم</span>
             <span>•</span>
             <span>الطلبات: {orders.length}</span>
             <span>•</span>

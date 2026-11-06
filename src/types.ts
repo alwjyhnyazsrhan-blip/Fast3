@@ -36,6 +36,7 @@ export interface OrderItem {
 
 export interface LocateGoSettings {
   maxDistanceKm: number;
+  maxPickupDistanceKm: number;
   autoAccept: boolean;
   soundAlerts: boolean;
   minPayoutSar: number;
