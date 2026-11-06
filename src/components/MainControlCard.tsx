@@ -305,7 +305,7 @@ export const MainControlCard: React.FC<MainControlCardProps> = ({
 
           {/* Auto Accept Switch */}
           <label className="flex items-center gap-2 cursor-pointer select-none">
-            <span className="text-slate-400 text-xs">قبول تلقائي:</span>
+            <span className="text-slate-400 text-xs font-semibold">قبول تلقائي:</span>
             <input
               id="checkbox-auto-accept"
               type="checkbox"
@@ -315,6 +315,18 @@ export const MainControlCard: React.FC<MainControlCardProps> = ({
             />
             <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500 relative"></div>
           </label>
+        </div>
+
+        {/* 3. Acceptance Mode: Auto-Swipe (السحب الآلي المباشر) */}
+        <div className="mt-3 p-3 bg-slate-900/60 rounded-xl border border-teal-500/30 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse" />
+            <span className="text-slate-200 font-bold">آلية القبول المعتمدة:</span>
+            <span className="text-teal-300 font-bold">السحب التلقائي (Auto-Swipe) ⚡</span>
+          </div>
+          <span className="text-[11px] text-slate-400 font-mono">
+            إيماءة السحب مفعلة لـ Locate Go
+          </span>
         </div>
       </div>
     </div>

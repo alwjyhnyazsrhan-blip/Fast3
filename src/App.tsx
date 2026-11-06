@@ -3,7 +3,6 @@ import { Header } from './components/Header';
 import { MainControlCard } from './components/MainControlCard';
 import { LiveStatusIndicator } from './components/LiveStatusIndicator';
 import { OrdersFeed } from './components/OrdersFeed';
-import { FloatingWidgetOverlay } from './components/FloatingWidgetOverlay';
 import { AndroidNativeControls } from './components/AndroidNativeControls';
 import { VipLockScreen } from './components/VipLockScreen';
 import { SecurityShieldBadge } from './components/SecurityShieldBadge';
@@ -30,7 +29,6 @@ export default function App() {
   });
 
   const [orders, setOrders] = useState<OrderItem[]>([]);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'floating'>('dashboard');
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const [isLocating, setIsLocating] = useState<boolean>(false);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
@@ -702,8 +700,6 @@ export default function App() {
         status={status}
         soundEnabled={soundEnabled}
         onToggleSound={() => setSoundEnabled(!soundEnabled)}
-        activeTab={activeTab}
-        onChangeTab={setActiveTab}
         onRefreshServer={handleRefreshServerOrders}
         isRefreshing={isRefreshing}
         vipCode={vipCode}
@@ -718,61 +714,46 @@ export default function App() {
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6 sm:px-6 space-y-6">
         
-        {/* VIEW 1: Main Driver Dashboard */}
-        {activeTab === 'dashboard' && (
-          <div className="space-y-6 animate-fadeIn">
-            {/* 1. Security & Anti-Reverse Engineering Protection Shield (ProGuard / R8 & API HMAC) */}
-            <SecurityShieldBadge currentDeviceId={deviceId} />
+        {/* Main Driver Dashboard */}
+        <div className="space-y-6 animate-fadeIn">
+          {/* 1. Security & Anti-Reverse Engineering Protection Shield (ProGuard / R8 & API HMAC) */}
+          <SecurityShieldBadge currentDeviceId={deviceId} />
 
-            {/* 2. Android Native Integration Controls (Single App Mode) */}
-            <AndroidNativeControls
-              settings={settings}
-              status={status}
-              onTogglePower={handleTogglePower}
-              onUpdateSettings={handleUpdateSettings}
-            />
+          {/* 2. Android Native Integration Controls (Single App Mode) */}
+          <AndroidNativeControls
+            settings={settings}
+            status={status}
+            onTogglePower={handleTogglePower}
+            onUpdateSettings={handleUpdateSettings}
+          />
 
-            {/* 3. Main Controls: Master Start/Stop & Max Distance Threshold */}
-            <MainControlCard
-              settings={settings}
-              status={status}
-              onTogglePower={handleTogglePower}
-              onUpdateMaxDistance={handleUpdateMaxDistance}
-              onUpdateSettings={handleUpdateSettings}
-              onGetLiveLocation={handleGetLiveGPSLocation}
-              isLocating={isLocating}
-            />
+          {/* 3. Main Controls: Master Start/Stop & Max Distance Threshold */}
+          <MainControlCard
+            settings={settings}
+            status={status}
+            onTogglePower={handleTogglePower}
+            onUpdateMaxDistance={handleUpdateMaxDistance}
+            onUpdateSettings={handleUpdateSettings}
+            onGetLiveLocation={handleGetLiveGPSLocation}
+            isLocating={isLocating}
+          />
 
-            {/* 4. Live Status & Diagnostics Indicator */}
-            <LiveStatusIndicator
-              status={status}
-              maxDistanceKm={settings.maxDistanceKm}
-            />
+          {/* 4. Live Status & Diagnostics Indicator */}
+          <LiveStatusIndicator
+            status={status}
+            maxDistanceKm={settings.maxDistanceKm}
+          />
 
-            {/* 5. Detected Orders Feed & History */}
-            <OrdersFeed
-              orders={orders}
-              maxDistanceKm={settings.maxDistanceKm}
-              isRunning={status.isRunning}
-              onClearOrders={handleClearOrders}
-              onTestCustomOrder={handleProcessOrder}
-              currentDeviceId={deviceId}
-            />
-          </div>
-        )}
-
-        {/* VIEW 2: Floating Mobile Phone Simulation for Couriers */}
-        {activeTab === 'floating' && (
-          <div className="animate-fadeIn">
-            <FloatingWidgetOverlay
-              settings={settings}
-              status={status}
-              latestOrder={orders[0] || null}
-              onTogglePower={handleTogglePower}
-              onUpdateMaxDistance={handleUpdateMaxDistance}
-            />
-          </div>
-        )}
+          {/* 5. Detected Orders Feed & History */}
+          <OrdersFeed
+            orders={orders}
+            maxDistanceKm={settings.maxDistanceKm}
+            isRunning={status.isRunning}
+            onClearOrders={handleClearOrders}
+            onTestCustomOrder={handleProcessOrder}
+            currentDeviceId={deviceId}
+          />
+        </div>
 
       </main>
 

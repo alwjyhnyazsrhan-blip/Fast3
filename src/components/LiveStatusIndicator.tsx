@@ -69,7 +69,7 @@ export const LiveStatusIndicator: React.FC<LiveStatusIndicatorProps> = ({ status
             </h3>
             <p className="text-xs text-slate-400 mt-0.5">
               {status.isRunning
-                ? `يتم فحص نافذة العرض كل 200ms، وقبول أي طلب مسافته أقل من أو تساوي ${maxDistanceKm} كم فوراً`
+                ? `يتم فحص نافذة العرض كل 200ms، وقبول أي طلب مسافته ≤ ${maxDistanceKm} كم فورياً عبر السحب التلقائي (Auto-Swipe)`
                 : 'لن يتم قبول أو تحليل أي طلبات حتى يتم تشغيل الأداة عبر الزر الرئيسي'}
             </p>
           </div>

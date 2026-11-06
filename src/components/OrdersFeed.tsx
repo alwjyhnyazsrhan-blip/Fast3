@@ -463,7 +463,7 @@ export const OrdersFeed: React.FC<OrdersFeedProps> = ({
                       {isAccepted ? (
                         <>
                           <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                          <span>تم القبول الآلي</span>
+                          <span>تم القبول الآلي بالسحب ⚡</span>
                         </>
                       ) : (
                         <>

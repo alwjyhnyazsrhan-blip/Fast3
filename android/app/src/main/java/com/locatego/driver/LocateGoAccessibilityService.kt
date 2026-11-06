@@ -64,16 +64,20 @@ class LocateGoAccessibilityService : AccessibilityService() {
             "notifications", "about", "close", "back", "cancel", "menu", "next", "skip"
         )
 
-        // كلمات أزرار القبول المستهدفة للنقر الفوري الفائق
+        // كلمات أزرار القبول المستهدفة للسحب الآلي (Automatic Swipe to Accept) والنقر الفوري
         private val ACCEPT_BUTTON_KEYWORDS = listOf(
-            "قبول", "قبول الطلب", "استلام الطلب", "تأكيد القبول", "تأكيد", "وافق", "موافق",
-            "Accept", "Take Order", "Confirm", "Accept Order", "إسناد", "استلام", "موافقة", "سحب للقبول"
+            "اسحب لقبول الطلب", "اسحب للموافقة", "اسحب لتأكيد الطلب", "اسحب لتأكيد", "اسحب للقبول",
+            "اسحب للموافقه", "اسحب للتاكيد", "اسحب", "سحب للقبول", "سحب لقبول الطلب", "سحب للموافقة",
+            "سحب", "سحب للطلب", "قبول بالسحب", "قبول", "قبول الطلب", "استلام الطلب", "تأكيد القبول",
+            "تأكيد", "وافق", "موافق", "Accept", "Take Order", "Confirm", "Accept Order",
+            "slide to accept", "swipe to accept", "slide_to_accept", "swipe_to_accept"
         )
 
-        // معرّفات عناصر أزرار القبول المحتملة في الواجهات
+        // معرّفات عناصر أشرطة القبول بالسحب المحتملة في الواجهات
         private val ACCEPT_VIEW_IDS = listOf(
-            "btn_accept", "accept", "accept_order", "btnAccept", "btn_confirm",
-            "order_accept", "take_order", "button_accept", "action_accept", "btn_take", "slide_to_accept"
+            "slide_to_accept", "swipe_to_accept", "slider", "swipe_btn", "swipe_view", "drag_to_accept",
+            "btn_swipe", "swipe_button", "slider_button", "swipe_layout", "btn_accept", "accept",
+            "accept_order", "btnAccept", "btn_confirm", "order_accept", "take_order", "button_accept"
         )
     }
 
@@ -292,18 +296,19 @@ class LocateGoAccessibilityService : AccessibilityService() {
             processedOrdersCache[deduplicationKey] = now
 
             // =========================================================================
-            // تنفيذ النقر الفوري الفائق (Zero-Delay Accept) في جزء من الثانية
+            // تنفيذ السحب الآلي الفوري الفائق (Zero-Delay Auto-Swipe to Accept)
+            // يسحب شريط القبول تلقائياً للموافقة على الطلب فور استيفاء شروط المسافة
             // =========================================================================
             val targetNode = scanResult.acceptButtonNode
-            val clickSuccess = if (targetNode != null) {
-                performInstantClick(targetNode)
+            val swipeSuccess = if (targetNode != null) {
+                performInstantAccept(targetNode)
             } else {
                 executeFallbackAccept(root)
             }
 
             Log.i(
                 "LocateGoService",
-                "⚡⚡ ZERO-DELAY ACCEPT TRIGGERED! [Success=$clickSuccess] Store='$storeName' | Customer Dist: ${deliveryDistKm ?: targetEvaluationDistanceKm} km <= $maxAllowedKm km (Restaurant: ${pickupDistKm ?: "N/A"} km OPEN)"
+                "⚡⚡ ZERO-DELAY AUTO-SWIPE TRIGGERED! [Success=$swipeSuccess] Store='$storeName' | Customer Dist: ${deliveryDistKm ?: targetEvaluationDistanceKm} km <= $maxAllowedKm km"
             )
 
             // تنبيه السائق بالصوت والاهتزاز بشكل متزامن وغير معطل
@@ -370,18 +375,20 @@ class LocateGoAccessibilityService : AccessibilityService() {
             else -> null
         }
 
-        // 1. فحص زر القبول لحظياً في العقدة
+        // 1. فحص شريط أو زر القبول لحظياً في العقدة (سحب أو نقر)
         if (result.acceptButtonNode == null) {
             val isAcceptId = ACCEPT_VIEW_IDS.any { viewId.endsWith(it) || viewId.contains(it) }
             val isAcceptKeyword = rawContent != null && ACCEPT_BUTTON_KEYWORDS.any { rawContent.contains(it, ignoreCase = true) }
 
             if (isAcceptId || isAcceptKeyword) {
                 result.acceptButtonNode = node
-            } else if (node.isClickable || node.className?.toString()?.contains("Button", true) == true) {
-                // فحص الأزرار الواقعة في الثلث السفلي من الشاشة
+            } else {
                 val bounds = Rect()
                 node.getBoundsInScreen(bounds)
-                if (bounds.centerY() > (displayHeight * 0.60f)) {
+                val isLowerArea = bounds.centerY() > (displayHeight * 0.58f)
+                val isWideSliderBar = bounds.width() > (resources.displayMetrics.widthPixels * 0.45f) && bounds.height() in 35..380
+
+                if (isLowerArea && (isWideSliderBar || node.isClickable || node.className?.toString()?.contains("Button", true) == true)) {
                     val contentStr = rawContent?.lowercase() ?: ""
                     val isReject = contentStr.contains("رفض") || contentStr.contains("إلغاء") ||
                             contentStr.contains("تجاهل") || contentStr.contains("reject") || contentStr.contains("cancel")
@@ -431,68 +438,127 @@ class LocateGoAccessibilityService : AccessibilityService() {
     }
 
     /**
-     * تنفيذ النقر الفوري الفائق (Zero-Delay Instant Click) عبر ACTION_CLICK وإحداثيات اللمس في 1ms
+     * تنفيذ السحب الآلي الفوري للموافقة على الطلب (Automatic Swipe-to-Accept Gesture)
+     * يسحب المقبض من بداية الشريط (اليسار) إلى نهايته (اليمين) في 160ms عبر إيماءة عتادية حقيقية (dispatchGesture)
      */
-    private fun performInstantClick(node: AccessibilityNodeInfo): Boolean {
-        var clicked = false
+    private fun performSwipeToAccept(node: AccessibilityNodeInfo?): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return false
 
-        // 1. أمر النقر البرمجي الفوري عبر نظام الـ Accessibility
+        val displayMetrics = resources.displayMetrics
+        val screenWidth = displayMetrics.widthPixels.toFloat()
+        val screenHeight = displayMetrics.heightPixels.toFloat()
+
+        val bounds = Rect()
+        if (node != null) {
+            node.getBoundsInScreen(bounds)
+            // البحث عن الحاوية الكاملة لشريط السحب (Parent Slider Container)
+            var pNode: AccessibilityNodeInfo? = node.parent
+            while (pNode != null) {
+                val pBounds = Rect()
+                pNode.getBoundsInScreen(pBounds)
+                // إذا كان الوالد أعرض من العقدة الحالية ويقع في الثلث السفلي من الشاشة
+                if (pBounds.width() > bounds.width() && pBounds.height() < (screenHeight * 0.35f)) {
+                    bounds.set(pBounds)
+                }
+                pNode = pNode.parent
+            }
+        }
+
+        // حساب إحداثيات السحب الرأسي والأفقي بدقة متناهية:
+        val cy = if (!bounds.isEmpty && bounds.centerY() > (screenHeight * 0.45f)) {
+            bounds.centerY().toFloat()
+        } else {
+            // الثلث السفلي من الشاشة (الموضع القياسي لشريط اسحب للقبول في تطبيق Locate Go)
+            screenHeight * 0.84f
+        }
+
+        val startX = if (!bounds.isEmpty && bounds.width() > (screenWidth * 0.35f)) {
+            bounds.left.toFloat() + (bounds.height().toFloat() * 0.45f).coerceAtLeast(60f)
+        } else {
+            screenWidth * 0.12f // مقبض البداية على اليسار
+        }
+
+        val endX = if (!bounds.isEmpty && bounds.width() > (screenWidth * 0.35f)) {
+            bounds.right.toFloat() - (bounds.height().toFloat() * 0.35f).coerceAtLeast(50f)
+        } else {
+            screenWidth * 0.88f // نهاية المسار على اليمين
+        }
+
+        Log.i("LocateGoService", "👆 AUTOMATIC SWIPE TO ACCEPT: from ($startX, $cy) to ($endX, $cy) [160ms stroke]")
+
+        // مسار السحب الأفقي الحقيقي لتمرير المقبض إلى نقطة التأكيد
+        val swipePath = Path().apply {
+            moveTo(startX, cy)
+            lineTo(endX, cy)
+        }
+
+        // مدة السحب 160ms لضمان تسجيل حركة السحب الكاملة بالعتاد (ACTION_DOWN -> ACTION_MOVE -> ACTION_UP)
+        val stroke = GestureDescription.StrokeDescription(swipePath, 0L, 160L)
+        val gesture = GestureDescription.Builder().addStroke(stroke).build()
+
+        var dispatched = dispatchGesture(gesture, object : GestureResultCallback() {
+            override fun onCompleted(gestureDescription: GestureDescription?) {
+                Log.i("LocateGoService", "⚡⚡ AUTOMATIC SWIPE ACCEPT COMPLETED SUCCESSFULLY!")
+            }
+            override fun onCancelled(gestureDescription: GestureDescription?) {
+                Log.w("LocateGoService", "⚠️ Swipe gesture was cancelled")
+            }
+        }, null)
+
+        return dispatched
+    }
+
+    /**
+     * تنفيذ القبول الفوري الفائق بالسحب الآلي (Automatic Swipe) مع دعم النقر التكميلي
+     */
+    private fun performInstantAccept(node: AccessibilityNodeInfo): Boolean {
+        // 1. تنفيذ السحب الآلي فوراً (Automatic Swipe-to-Accept)
+        val swipeSuccess = performSwipeToAccept(node)
+
+        // 2. أمر النقر كإجراء داعم في حال كانت بعض الواجهات تستقبل النقر أيضاً
         var curr: AccessibilityNodeInfo? = node
         while (curr != null) {
             if (curr.isClickable) {
-                clicked = curr.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                if (clicked) break
+                curr.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                break
             }
             curr = curr.parent
         }
 
-        // 2. نقر عتادي حقيقي باللمس فوراً بدون أي تأخير (1ms Touch Stroke) لضمان الاستجابة في التطبيقات التي لا تستجيب لـ ACTION_CLICK
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            val bounds = Rect()
-            node.getBoundsInScreen(bounds)
-            if (!bounds.isEmpty && bounds.width() > 0 && bounds.height() > 0) {
-                val cx = bounds.centerX().toFloat()
-                val cy = bounds.centerY().toFloat()
-                val tapPath = Path().apply { moveTo(cx, cy) }
-                // مدة اللمسة 1ms فقط (بدون أي تأخير أو انتظار)
-                val stroke = GestureDescription.StrokeDescription(tapPath, 0L, 1L)
-                val gesture = GestureDescription.Builder().addStroke(stroke).build()
-                dispatchGesture(gesture, null, null)
-                clicked = true
-            }
-        }
-
-        return clicked
+        return swipeSuccess
     }
 
+    private fun performInstantClick(node: AccessibilityNodeInfo): Boolean = performInstantAccept(node)
+
     /**
-     * محاولة النقر البديلة في حال لم يُحدد الزر أثناء المسح الأولي
+     * محاولة القبول البديلة في حال لم يُحدد الزر أثناء المسح الأولي
      */
     private fun executeFallbackAccept(root: AccessibilityNodeInfo): Boolean {
         val currentRoot = rootInActiveWindow ?: root
 
-        // فحص سريع لكلمات القبول الأساسية
+        // 1. فحص كلمات السحب والقبول
         for (keyword in ACCEPT_BUTTON_KEYWORDS) {
             val nodes = currentRoot.findAccessibilityNodeInfosByText(keyword)
             if (nodes.isNotEmpty()) {
                 for (node in nodes) {
-                    if (performInstantClick(node)) return true
+                    if (performInstantAccept(node)) return true
                 }
             }
         }
 
-        // فحص لمعرفات العناصر
+        // 2. فحص لمعرفات عناصر الأشرطة
         for (viewId in ACCEPT_VIEW_IDS) {
             val fullId = "${currentForegroundPackage}:id/$viewId"
             val nodes = currentRoot.findAccessibilityNodeInfosByViewId(fullId)
             if (nodes.isNotEmpty()) {
                 for (node in nodes) {
-                    if (performInstantClick(node)) return true
+                    if (performInstantAccept(node)) return true
                 }
             }
         }
 
-        return false
+        // 3. Fallback: سحب مباشر تلقائي في موضع شريط القبول أسفل الشاشة
+        return performSwipeToAccept(null)
     }
 
     private fun extractAllDistancesFromTexts(texts: List<String>): List<Double> {

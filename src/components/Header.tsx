@@ -17,8 +17,6 @@ interface HeaderProps {
   status: LocateGoStatus;
   soundEnabled: boolean;
   onToggleSound: () => void;
-  activeTab: 'dashboard' | 'floating' | string;
-  onChangeTab: (tab: 'dashboard' | 'floating') => void;
   onRefreshServer: () => void;
   isRefreshing?: boolean;
   vipCode?: string;
@@ -32,8 +30,6 @@ export const Header: React.FC<HeaderProps> = ({
   status,
   soundEnabled,
   onToggleSound,
-  activeTab,
-  onChangeTab,
   onRefreshServer,
   isRefreshing = false,
   vipCode,
@@ -106,34 +102,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Courier Navigation Tabs (Developer and hosting tabs removed) */}
-        <div className="flex items-center gap-1.5 p-1 bg-slate-900/80 rounded-xl border border-slate-800 self-center overflow-x-auto max-w-full">
-          <button
-            id="tab-dashboard-btn"
-            onClick={() => onChangeTab('dashboard')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-              activeTab === 'dashboard'
-                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-            }`}
-          >
-            <LayoutDashboard className="w-3.5 h-3.5" />
-            <span>لوحة تحكم السائق</span>
-          </button>
 
-          <button
-            id="tab-floating-btn"
-            onClick={() => onChangeTab('floating')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-              activeTab === 'floating'
-                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-            }`}
-          >
-            <Smartphone className="w-3.5 h-3.5 text-cyan-400" />
-            <span>النافذة العائمة (شاشة الجوال)</span>
-          </button>
-        </div>
 
         {/* Global Controls & Action trigger */}
         <div className="flex items-center justify-end gap-2">

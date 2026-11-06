@@ -736,32 +736,61 @@ class LocateGoAccessibilityService : AccessibilityService() {
     }
 
     /**
-     * تنفيذ النقر المزدوج (Accessibility Click + Touch Gesture Coordinate Tap) لضمان القبول الفوري
+     * تنفيذ القبول الفوري عبر السحب الأفقي (Swipe to Accept) والنقر لضمان القبول في تطبيقات مثل جاهز وذا شفز
      */
     private fun performFastClickAndTap(node: AccessibilityNodeInfo): Boolean {
-        var clicked = false
+        var accepted = false
 
-        // 1. استدعاء أمر النقر البرمجي ACTION_CLICK على العقدة أو العقدة الحاوية
-        var current: AccessibilityNodeInfo? = node
-        while (current != null) {
-            if (current.isClickable) {
-                clicked = current.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                if (clicked) break
-            }
-            current = current.parent
-        }
+        // 1. فحص ما إذا كان شريط سحب (Slider / Swipe bar)
+        val text = node.text?.toString() ?: ""
+        val desc = node.contentDescription?.toString() ?: ""
+        val viewId = node.viewIdResourceName?.lowercase() ?: ""
+        val isSwipe = text.contains("اسحب") || text.contains("سحب") ||
+                desc.contains("اسحب") || viewId.contains("slide") || viewId.contains("swipe")
 
-        // 2. نقر فوري عبر إحداثيات الشاشة بالعتاد (Coordinate Tap في 40ms) لضمان تفعيل أي زر
+        // 2. سحب أفقي فوري (Swipe Gesture) للمقبض من البداية للنهاية
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             val bounds = Rect()
             node.getBoundsInScreen(bounds)
             if (!bounds.isEmpty && bounds.width() > 0 && bounds.height() > 0) {
-                performInstantTapAtCoordinates(bounds.centerX().toFloat(), bounds.centerY().toFloat())
-                clicked = true
+                if (isSwipe || bounds.width() > bounds.height() * 1.5f) {
+                    val cy = bounds.centerY().toFloat()
+                    val startX = bounds.left + (bounds.height() * 0.45f).coerceAtLeast(24f)
+                    val endX = bounds.right - (bounds.height() * 0.35f).coerceAtLeast(24f)
+                    val swipePath = Path().apply {
+                        moveTo(startX, cy)
+                        lineTo(endX, cy)
+                    }
+                    val stroke = GestureDescription.StrokeDescription(swipePath, 0L, 100L)
+                    val gesture = GestureDescription.Builder().addStroke(stroke).build()
+                    dispatchGesture(gesture, null, null)
+                    accepted = true
+                }
             }
         }
 
-        return clicked
+        // 3. استدعاء أمر النقر البرمجي ACTION_CLICK على العقدة أو العقدة الحاوية
+        var current: AccessibilityNodeInfo? = node
+        while (current != null) {
+            if (current.isClickable) {
+                val clicked = current.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                if (clicked) accepted = true
+                break
+            }
+            current = current.parent
+        }
+
+        // 4. نقر فوري عبر إحداثيات الشاشة بالعتاد كخيار إضافي
+        if (!accepted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            val bounds = Rect()
+            node.getBoundsInScreen(bounds)
+            if (!bounds.isEmpty && bounds.width() > 0 && bounds.height() > 0) {
+                performInstantTapAtCoordinates(bounds.centerX().toFloat(), bounds.centerY().toFloat())
+                accepted = true
+            }
+        }
+
+        return accepted
     }
 
     /**
